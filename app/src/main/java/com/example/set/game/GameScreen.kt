@@ -304,7 +304,7 @@ private fun GameHeader(
                 }
             }
             Text(
-                text = stringResource(R.string.header_on_table, state.cardsOnTable),
+                text = stringResource(R.string.header_in_deck, state.deck.size),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

@@ -139,18 +139,20 @@ fun CardFace(
                 .padding(10.dp),
         ) {
             val count = card.number.value
-            val aspect = ShapePaths.aspect(card.shape)
-            val gapRatio = 0.14f
-            val maxHeight = size.height * 0.74f
+            val aspect = ShapePaths.aspect(card.shape) // width / height
+            val gapRatio = 0.12f
+            val maxShapeWidth = size.width * 0.94f
+            val heightBudget = size.height * 0.88f
 
-            val widthFromRow = size.width / (count + gapRatio * (count - 1))
-            val shapeWidth = minOf(widthFromRow, maxHeight * aspect)
-            val shapeHeight = shapeWidth / aspect
-            val gap = shapeWidth * gapRatio
+            // Shapes stack vertically, as on the physical cards.
+            val perShapeHeight = heightBudget / (count + gapRatio * (count - 1))
+            val shapeHeight = minOf(perShapeHeight, maxShapeWidth / aspect)
+            val shapeWidth = shapeHeight * aspect
+            val gap = shapeHeight * gapRatio
 
-            val rowWidth = count * shapeWidth + (count - 1) * gap
-            var left = (size.width - rowWidth) / 2f
-            val top = (size.height - shapeHeight) / 2f
+            val totalHeight = count * shapeHeight + (count - 1) * gap
+            var top = (size.height - totalHeight) / 2f
+            val left = (size.width - shapeWidth) / 2f
 
             val color = cardColor(card.color, colorblindPalette)
             val unitPath = ShapePaths.of(card.shape)
@@ -159,7 +161,7 @@ fun CardFace(
             repeat(count) {
                 val path = scaledPath(unitPath, shapeWidth, shapeHeight, left, top)
                 drawShaded(path, color, card.shading, stroke)
-                left += shapeWidth + gap
+                top += shapeHeight + gap
             }
         }
     }
@@ -191,15 +193,15 @@ private fun DrawScope.drawShaded(
         CardShading.STRIPED -> {
             clipPath(path) {
                 val bounds = path.getBounds()
-                val stripes = 7
-                val slot = bounds.height / stripes
-                val stripeWidth = slot * 0.45f
+                val stripes = 9
+                val slot = bounds.width / stripes
+                val stripeWidth = slot * 0.42f
                 for (i in 0 until stripes) {
-                    val y = bounds.top + slot * (i + 0.5f)
+                    val x = bounds.left + slot * (i + 0.5f)
                     drawLine(
                         color = color,
-                        start = Offset(bounds.left - 2f, y),
-                        end = Offset(bounds.right + 2f, y),
+                        start = Offset(x, bounds.top - 2f),
+                        end = Offset(x, bounds.bottom + 2f),
                         strokeWidth = stripeWidth,
                     )
                 }

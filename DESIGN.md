@@ -145,7 +145,7 @@ Plus a **pause sheet** reachable from the game header (also triggered by leaving
 └─────────────────────────────────────┘
 ```
 
-- **Header:** back, sets-found counter and timer, a small `N on table` line beneath them, and
+- **Header:** back, sets-found counter and timer, a small `N in deck` line beneath them, and
   overflow (pause / how to play / settings).
 - **Board:** always 3 columns. Card size is derived from available width and the current row
   count (4 rows normally, 5–6 when extra cards are dealt). One size step down for 15/18 so the
@@ -221,22 +221,27 @@ No hand-rolled per-composable color literals.
 Cards are drawn with `Canvas`, not images. Each card is a `CardFace` composable that takes the
 four attributes and draws into a box of `w × 1.4w`:
 
-- **Shape geometry**, normalised to a unit box and scaled to fit:
-  - *Diamond*: rhombus with vertices at (0.5, 0), (1, 0.5), (0.5, 1), (0, 0.5); drawn slightly
-    narrower (×0.62) so it reads as a Set diamond rather than a square rotated 45°.
-  - *Oval*: stadium shape — two semicircles of radius `h/2` joined by straight edges; width 0.78
-    of the unit box.
-  - *Squiggle*: an S-curve built from four cubic Béziers (two lobes), closed and symmetric about
-    the centre line; width 0.82, amplitude 0.42 of the box. The path is cached per size.
+- **Shape geometry**, normalised to a unit box and scaled to fit. Physical Set shapes are wider
+  than they are tall, so the unit box is stretched by an aspect ratio rather than the path being
+  drawn tall:
+  - *Diamond*: rhombus filling the box, aspect 1.60 (w/h) — a wide diamond, not a rotated square.
+  - *Oval*: wide rounded rectangle filling the box, corner radius below half the height (0.26 w,
+    0.24 h h), aspect 1.75 — a squat capsule, not an ellipse.
+  - *Squiggle*: a horizontal band of varying thickness following a sine centre line, sampled at
+    64 steps and filling the box, aspect 1.55. Sampling keeps the curve organic and is cheap.
+    Clamp `sin(PI)` before `sqrt` when tapering: it is a hair negative in Float maths and a NaN
+    path renders as a blank card.
 - **Shading**:
   - *Solid*: fill the path with the card color.
-  - *Striped*: stroke the outline at 2 dp and fill with 7 horizontal stripes of the card color,
-    clipped to the path, each ~2 dp thick with equal gaps. Stripe count is fixed, not scaled, so
-    striped cards stay recognisable at small sizes.
+  - *Striped*: stroke the outline at 2 dp and fill with 9 **vertical** stripes of the card
+    color, clipped to the path, each ~2 dp thick with equal gaps — matching the fine vertical
+    hatching on the physical cards. Stripe count is fixed, not scaled, so striped cards stay
+    recognisable at small sizes.
   - *Open*: stroke the outline only, 2.5 dp.
-- **Number**: repeat the shape 1, 2, or 3 times in a horizontal row, centred, with 0.12w gaps;
-  per-shape width divides the available row width by the count. One shape is larger than each
-  shape in a trio.
+- **Number**: repeat the shape 1, 2, or 3 times in a **vertical column**, centred, with gaps of
+  0.12 × shape height. Shape height is capped both by the column's height budget and by the card
+  width, so a single shape is larger than each shape of a trio. This matches the physical layout:
+  symbols stack vertically.
 - The card face keeps ≥ 8 dp inner padding so stripes never touch the border.
 
 Rendering rules are unit-testable only at the geometry level (path bounds, repetition count), so

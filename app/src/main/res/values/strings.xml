@@ -16,7 +16,7 @@
     <string name="start_best_none">No result yet</string>
 
     <string name="header_sets">%1$d sets</string>
-    <string name="header_on_table">%1$d on table</string>
+    <string name="header_in_deck">%1$d in deck</string>
     <string name="action_back">Back</string>
     <string name="action_more">More</string>
     <string name="action_hint">Hint</string>

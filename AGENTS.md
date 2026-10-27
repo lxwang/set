@@ -64,8 +64,9 @@ an adb daemon inside WSL.
 
 - Cards are drawn on `Canvas` from `ui/ShapePaths.kt`; there are no image assets
   and none should be added. Shape geometry is normalised to a unit box.
-- A striped shape draws 7 clipped stripes plus an outline; open is outline only;
-  solid is a fill.
+- Shapes are wider than tall (physical Set cards), stacked **vertically** on a
+  card, with **vertical** stripes. Aspect ratios live in `ShapePaths`; do not
+  draw a tall shape or lay symbols out in a row.
 - Animations: a found set blinks gold twice (2 x 150 ms) before removal; new
   cards slide in from +56 dp x / +40 dp y over 280 ms, keyed on `GameState.deals`.
 - Selection and hints must be visible without colour (border/lift), and every

@@ -8,41 +8,38 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
- * Shape outlines normalised into a unit box (0,0)–(1,1). The card renderer
- * scales each path to the size it needs, so these constants are the only place
- * geometry lives.
+ * Shape outlines normalised into a unit box (0,0)–(1,1), matching the physical
+ * cards: every shape is wider than it is tall, and [aspect] gives that ratio.
+ * The card renderer scales each path to the size it needs.
  */
 object ShapePaths {
 
-    /** Tall rhombus, narrower than the box so it doesn't read as a rotated square. */
+    /** Wide rhombus filling the box. */
     private val diamond: Path = Path().apply {
-        moveTo(0.50f, 0.02f)
-        lineTo(0.81f, 0.50f)
-        lineTo(0.50f, 0.98f)
-        lineTo(0.19f, 0.50f)
+        moveTo(0f, 0.5f)
+        lineTo(0.5f, 0f)
+        lineTo(1f, 0.5f)
+        lineTo(0.5f, 1f)
         close()
     }
 
-    /**
-     * Tall rounded rectangle. The corner radius must stay well below half the
-     * width, otherwise the shape degenerates into an ellipse.
-     */
+    /** Wide rounded rectangle; corner radius stays below half the height. */
     private val oval: Path = Path().apply {
         addRoundRect(
             RoundRect(
-                left = 0.11f,
-                top = 0.02f,
-                right = 0.89f,
-                bottom = 0.98f,
-                cornerRadius = CornerRadius(0.32f, 0.36f),
+                left = 0f,
+                top = 0f,
+                right = 1f,
+                bottom = 1f,
+                cornerRadius = CornerRadius(0.26f, 0.24f),
             ),
         )
     }
 
     /**
-     * The Set squiggle: a band of varying width following a sine-shaped centre
-     * line. Sampling the outline is far easier to keep organic than hand-placed
-     * Béziers, and the shape is built once.
+     * Horizontal squiggle: a band of varying thickness following a sine-shaped
+     * centre line, filling the box. Sampled outline rather than hand-placed
+     * Béziers, which keeps the curve organic at any size.
      */
     private val squiggle: Path = buildSquiggle()
 
@@ -52,46 +49,43 @@ object ShapePaths {
         CardShape.OVAL -> oval
     }
 
-    /** Width / height ratio used to lay shapes out without distortion. */
+    /** Width / height ratio, used to lay shapes out without distortion. */
     fun aspect(shape: CardShape): Float = when (shape) {
-        CardShape.DIAMOND -> 0.62f
-        CardShape.OVAL -> 0.78f
-        CardShape.SQUIGGLE -> 0.82f
+        CardShape.DIAMOND -> 1.60f
+        CardShape.OVAL -> 1.75f
+        CardShape.SQUIGGLE -> 1.55f
     }
 }
 
 private fun buildSquiggle(): Path {
     val steps = 64
-    val yStart = 0.05f
-    val yEnd = 0.95f
-    val amplitude = 0.13f
-    val halfWidth = 0.21f
-    val extent = halfWidth + amplitude
+    val amplitude = 0.10f
+    val halfHeight = 0.35f
+    val extent = amplitude + halfHeight
 
-    fun centre(y: Float): Float = 0.5f + amplitude * sin(TWO_PI * y)
+    fun centre(x: Float): Float = 0.5f + amplitude * sin(TWO_PI * x)
 
-    fun halfWidthAt(y: Float): Float {
-        val t = (y - yStart) / (yEnd - yStart)
+    fun halfHeightAt(x: Float): Float {
         // sin(PI) is a hair negative in Float; sqrt of that is NaN and would
-        // poison the whole path (a blank card). Clamp before taking the root.
-        val taper = 0.55f + 0.45f * sqrt(sin(PI * t).coerceAtLeast(0f))
-        return halfWidth * taper
+        // blank the whole card. Clamp before taking the root.
+        val taper = 0.65f + 0.35f * sqrt(sin(PI * x).coerceAtLeast(0f))
+        return halfHeight * taper
     }
 
-    fun x(y: Float, side: Float): Float {
-        val offset = (centre(y) - 0.5f) + side * halfWidthAt(y)
+    fun y(x: Float, side: Float): Float {
+        val offset = (centre(x) - 0.5f) + side * halfHeightAt(x)
         return 0.5f + offset / extent * 0.5f
     }
 
     return Path().apply {
-        moveTo(x(yStart, -1f), yStart)
+        moveTo(0f, y(0f, -1f))
         for (i in 1..steps) {
-            val y = yStart + (yEnd - yStart) * i / steps
-            lineTo(x(y, -1f), y)
+            val x = i.toFloat() / steps
+            lineTo(x, y(x, -1f))
         }
         for (i in steps downTo 0) {
-            val y = yStart + (yEnd - yStart) * i / steps
-            lineTo(x(y, 1f), y)
+            val x = i.toFloat() / steps
+            lineTo(x, y(x, 1f))
         }
         close()
     }
