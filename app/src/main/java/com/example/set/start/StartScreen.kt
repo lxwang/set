@@ -17,6 +17,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,7 +38,9 @@ import com.example.set.engine.formatDuration
 @Composable
 fun StartScreen(
     settings: SettingsRepository,
+    hasSavedGame: Boolean,
     onPlay: (GameMode) -> Unit,
+    onResume: () -> Unit,
 ) {
     val best = settings.best(settings.mode)
 
@@ -101,15 +104,22 @@ fun StartScreen(
         Spacer(Modifier.height(24.dp))
 
         Button(
-            onClick = { onPlay(settings.mode) },
+            onClick = { if (hasSavedGame) onResume() else onPlay(settings.mode) },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
         ) {
             Text(
-                text = stringResource(R.string.start_play),
+                text = stringResource(
+                    if (hasSavedGame) R.string.action_resume_game else R.string.start_play,
+                ),
                 style = MaterialTheme.typography.titleMedium,
             )
+        }
+        if (hasSavedGame) {
+            TextButton(onClick = { onPlay(settings.mode) }) {
+                Text(stringResource(R.string.action_new_game_start))
+            }
         }
     }
 }

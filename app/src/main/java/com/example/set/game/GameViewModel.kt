@@ -3,6 +3,7 @@ package com.example.set.game
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.set.data.BestResult
+import com.example.set.data.GameStore
 import com.example.set.data.SettingsRepository
 import com.example.set.engine.GameMode
 import com.example.set.engine.GamePhase
@@ -29,9 +30,21 @@ data class GameResult(
 class GameViewModel(
     private val mode: GameMode,
     private val settings: SettingsRepository,
+    private val store: GameStore,
+    initial: GameState? = null,
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(GameState.newGame(mode))
+    private val opening = initial ?: GameState.newGame(mode)
+
+    private val _state = MutableStateFlow(
+        opening.copy(
+            phase = GamePhase.PLAYING,
+            selected = emptyList(),
+            hintIndices = null,
+            goldSlots = emptyList(),
+            dealtSlots = emptyList(),
+        ),
+    )
     val state: StateFlow<GameState> = _state.asStateFlow()
 
     /** Set once, when the game ends; the screen navigates on it. */
@@ -39,9 +52,15 @@ class GameViewModel(
         private set
 
     private var hintJob: Job? = null
+    private var blinkJob: Job? = null
     private var recorded = false
 
     init {
+        if (initial != null) {
+            // Resuming: keep the saved clock, but make sure it is persisted even
+            // if the process dies before the next action.
+            store.save(_state.value)
+        }
         viewModelScope.launch {
             while (isActive) {
                 delay(1_000)
@@ -53,8 +72,27 @@ class GameViewModel(
         }
     }
 
+    /**
+     * A valid trio is not removed immediately: it stays on the table with
+     * [GameState.goldSlots] set so the UI can blink its outline, then resolves.
+     */
     fun tap(index: Int) {
-        update(_state.value.tap(index).ensurePlayable())
+        val current = _state.value
+        if (current.phase != GamePhase.PLAYING || current.isResolving) return
+
+        val candidate = current.tap(index)
+        if (candidate.setsFound > current.setsFound) {
+            val trio = current.selected + index
+            _state.value = current.copy(selected = trio, goldSlots = trio, started = true)
+            blinkJob?.cancel()
+            blinkJob = viewModelScope.launch {
+                delay(GOLD_BLINK_MILLIS)
+                update(current.tap(index).ensurePlayable())
+            }
+            return
+        }
+
+        update(candidate.ensurePlayable())
     }
 
     fun hint() {
@@ -73,34 +111,48 @@ class GameViewModel(
 
     fun resume() = update(_state.value.resume())
 
+    /** Called when the game screen is being left. Freezes the clock and saves. */
+    fun leave() {
+        update(_state.value.pause())
+    }
+
     fun newGame() {
         hintJob?.cancel()
+        blinkJob?.cancel()
         recorded = false
         result = null
         update(GameState.newGame(mode))
     }
 
-    fun hasHintsLeft(): Boolean = _state.value.hintsRemaining > 0
-
     private fun update(next: GameState) {
         _state.value = next
-        if (next.phase == GamePhase.GAME_OVER && !recorded) {
-            recorded = true
-            val seconds = next.totalSeconds
-            val perfect = next.table.isEmpty()
-            val isNewBest = settings.record(
-                mode,
-                BestResult(sets = next.setsFound, seconds = seconds, perfect = perfect),
-            )
-            result = GameResult(
-                mode = mode,
-                setsFound = next.setsFound,
-                seconds = seconds,
-                mistakes = next.mistakes,
-                hintsUsed = next.hintsUsed,
-                perfect = perfect,
-                isNewBest = isNewBest,
-            )
+        if (next.phase == GamePhase.GAME_OVER) {
+            store.clear()
+            if (!recorded) {
+                recorded = true
+                val seconds = next.totalSeconds
+                val perfect = next.cardsOnTable == 0
+                val isNewBest = settings.record(
+                    mode,
+                    BestResult(sets = next.setsFound, seconds = seconds, perfect = perfect),
+                )
+                result = GameResult(
+                    mode = mode,
+                    setsFound = next.setsFound,
+                    seconds = seconds,
+                    mistakes = next.mistakes,
+                    hintsUsed = next.hintsUsed,
+                    perfect = perfect,
+                    isNewBest = isNewBest,
+                )
+            }
+        } else {
+            store.save(next)
         }
+    }
+
+    private companion object {
+        /** Two gold blinks at 150 ms per phase, plus a little slack. */
+        const val GOLD_BLINK_MILLIS = 640L
     }
 }

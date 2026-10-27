@@ -67,14 +67,16 @@ all-different on others simultaneously.
 
 1. Shuffle the deck. Deal **12 cards** face up into a 3-column grid.
 2. The player taps three cards.
-   - If they form a set: the cards leave the table. If the deck still has cards, deal
-     **three replacements** so the table returns to its previous size.
+   - If they form a set: the cards leave the table. If the table then has **fewer than
+     12 cards** and the deck has cards, deal replacements **into the vacated slots**, left to
+     right. No other card ever moves; there is no re-flow.
    - If they do not: the selection clears and the player is charged a mistake.
 3. If the table contains **no set** at all (this is a real state — 18 cards can be set-free),
    the game announces it and deals **three extra cards** without removing anything. The
    table grows to 15, then 18. 21 cards mathematically guarantee a set, so this terminates.
-4. While the table is enlarged, a found set is removed **without replacement**. The table
-   shrinks back toward 12. Only when the table is back to 12 does normal replacement resume.
+4. While the table is enlarged (15/18), a found set is removed **without replacement** and the
+   layout compacts back toward 12, so no empty cells remain in the enlarged case. Only at 12
+   does normal in-place replacement resume.
 5. The game ends when the deck is empty and the table holds no set.
 
    **A run does not necessarily use all 81 cards.** The deck empties in threes, so when it runs
@@ -143,7 +145,8 @@ Plus a **pause sheet** reachable from the game header (also triggered by leaving
 └─────────────────────────────────────┘
 ```
 
-- **Header:** back, sets-found counter, timer, overflow (pause / how to play / sound).
+- **Header:** back, sets-found counter and timer, a small `N on table` line beneath them, and
+  overflow (pause / how to play / settings).
 - **Board:** always 3 columns. Card size is derived from available width and the current row
   count (4 rows normally, 5–6 when extra cards are dealt). One size step down for 15/18 so the
   board never scrolls. If the computed width would fall below 84 dp (very short screens),
@@ -158,7 +161,7 @@ Plus a **pause sheet** reachable from the game header (also triggered by leaving
 |---|---|
 | Card tapped | Card lifts ~2 dp, border thickens, subtle scale to 1.02 over 120 ms; haptic tick |
 | Third card tapped | 220 ms validation beat before resolution (so the player sees all three) |
-| Valid set | Cards flash the accent color, then collapse/fade out over 260 ms; replacements deal in with a 40 ms stagger; short ascending tone; haptic confirm |
+| Valid set | Cards blink a **gold** outline twice (150 ms per phase), then disappear; replacements slide in from the bottom-right of their slots over 280 ms; haptic confirm |
 | Invalid trio | Cards shake horizontally (±6 dp, 3 cycles, 300 ms), then deselect; low tone; haptic reject |
 | Hint | One valid set's three cards pulse an outline for 2.5 s; timer penalty toast |
 | No set on table | Inline banner "No set here — dealing 3 more" for 2 s, then the deal animates |
@@ -300,7 +303,8 @@ fun isSet(a: Card, b: Card, c: Card): Boolean
 fun findSet(cards: List<Card>): Triple<Card, Card, Card>?   // null when none
 
 data class GameState(
-    val table: List<Card>,          // 12, 15 or 18
+    // Slots, not a compacted list: null means a hole left by a removed set.
+    val table: List<Card?>,         // 12, 15 or 18 slots
     val deck: List<Card>,           // remaining draw pile
     val selected: List<Int>,        // indices into table, 0..2
     val setsFound: Int,             // 0..27
@@ -327,8 +331,13 @@ and `selected.size <= 3`.
   while `phase == Playing`; `elapsedSeconds` is derived, never accumulated by hand.
 - One-shot effects (sound, haptic, shake trigger) go through a `SharedFlow<UiEffect>` so they
   are not replayed on recomposition or rotation. Board content stays in the `StateFlow`.
-- Config changes: the ViewModel survives rotation. Process death mid-game restarts a fresh game
-  in v1; `SavedStateHandle` restoration is a stretch goal.
+- Config changes: the ViewModel survives rotation. The game is also **persisted after every
+  action** (`data/GameCodec` → `GameStore`), so process death, home/back, or switching apps
+  resumes exactly where it stopped. The clock is stored, never derived from wall time, so time
+  spent away never counts.
+- If the app opens with a saved game it goes straight into it; leaving the game by back, the
+  header, or the system home key pauses and saves it, and the start screen then offers
+  **Resume game**.
 
 ### 5.4 Dependencies
 
@@ -444,6 +453,7 @@ Shipped and verified on the `pi_phone` emulator (Android 16 / API 36):
 | M3 playable loop | Done. Tap/validate/replace/extra-deal/end-game, hint pulse, invalid-trio shake, haptics, timer. |
 | M4 start/summary/pause/persistence | Done. Mode choice, best result survives relaunch, pause freezes the clock. |
 | M5 polish | Partial. Launcher icon, colorblind palette, selection without colour, font-scale-safe header. TalkBack pass and reduced-motion still pending. |
+| v0.1.1 | Auto-save/resume (back, home, process death), table count in the header, gold double-blink before a set clears, slot-stable replacement dealing, slide-in deal animation. |
 
 Verified by script during implementation: a set was solved from `content-desc` and tapped
 (counter 0 → 1, table back to 12), an invalid trio left the counter unchanged and charged the

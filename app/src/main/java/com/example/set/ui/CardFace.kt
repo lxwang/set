@@ -1,5 +1,6 @@
 package com.example.set.ui
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
@@ -15,7 +16,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -39,15 +42,16 @@ import com.example.set.engine.CardShading
 import com.example.set.ui.theme.Accent
 import com.example.set.ui.theme.CardBorder
 import com.example.set.ui.theme.CardFaceBackground
+import com.example.set.ui.theme.Gold
 import com.example.set.ui.theme.Ink
 import com.example.set.ui.theme.cardColor
 
 private val CardShape12 = RoundedCornerShape(12.dp)
 
 /**
- * One Set card, drawn from geometry only — no image assets. Selection and hint
- * state are expressed through the border as well as colour, so they survive
- * colour-vision differences.
+ * One Set card, drawn from geometry only — no image assets. Selection, hints and
+ * the "set found" gold blink are expressed through the border as well as colour,
+ * so they survive colour-vision differences.
  */
 @Composable
 fun CardFace(
@@ -55,6 +59,9 @@ fun CardFace(
     colorblindPalette: Boolean,
     isSelected: Boolean,
     isHinted: Boolean,
+    isGold: Boolean,
+    animateDeal: Boolean,
+    dealKey: Int,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -66,18 +73,42 @@ fun CardFace(
         label = "hintPulse",
     )
     val scale by animateFloatAsState(
-        targetValue = if (isSelected) 1.02f else 1f,
+        targetValue = if (isSelected || isGold) 1.02f else 1f,
         animationSpec = tween(120),
         label = "cardScale",
     )
 
+    // Two gold blinks, then the ViewModel removes the set.
+    val goldBlink = remember { Animatable(0f) }
+    LaunchedEffect(isGold) {
+        if (isGold) {
+            repeat(2) {
+                goldBlink.animateTo(1f, tween(150))
+                goldBlink.animateTo(0f, tween(150))
+            }
+        } else {
+            goldBlink.snapTo(0f)
+        }
+    }
+
+    // New cards slide in from the bottom-right corner.
+    val dealProgress = remember(card, dealKey) {
+        Animatable(if (animateDeal) 0f else 1f)
+    }
+    LaunchedEffect(dealKey) {
+        if (dealProgress.value < 1f) {
+            dealProgress.animateTo(1f, tween(280))
+        }
+    }
+
     val borderColor = when {
-        isHinted -> Accent.copy(alpha = if (isHinted) hintPulse else 1f)
+        isGold -> Gold.copy(alpha = 0.30f + 0.70f * goldBlink.value)
+        isHinted -> Accent.copy(alpha = hintPulse)
         isSelected -> Ink
         else -> CardBorder
     }
     val borderWidth = when {
-        isHinted -> 3.dp
+        isGold || isHinted -> 3.dp
         isSelected -> 2.dp
         else -> 1.dp
     }
@@ -87,8 +118,11 @@ fun CardFace(
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
+                translationX = (1f - dealProgress.value) * 56.dp.toPx()
+                translationY = (1f - dealProgress.value) * 40.dp.toPx()
+                alpha = 0.2f + 0.8f * dealProgress.value
             }
-            .shadow(if (isSelected) 4.dp else 1.dp, CardShape12)
+            .shadow(if (isSelected || isGold) 4.dp else 1.dp, CardShape12)
             .clip(CardShape12)
             .background(CardFaceBackground)
             .border(borderWidth, borderColor, CardShape12)

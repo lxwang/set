@@ -10,8 +10,9 @@ import org.junit.Test
 
 class GameStateTest {
     private fun assertInvariant(state: GameState) {
-        assertEquals(81, state.table.size + state.deck.size + 3 * state.setsFound)
-        assertEquals(state.table.size, state.table.distinct().size)
+        assertEquals(81, state.cardsOnTable + state.deck.size + 3 * state.setsFound)
+        val cards = state.table.filterNotNull()
+        assertEquals(cards.size, cards.distinct().size)
         assertTrue(state.selected.size <= 3)
     }
 
@@ -22,6 +23,7 @@ class GameStateTest {
             assertInvariant(state)
             assertEquals(GamePhase.PLAYING, state.phase)
             assertTrue("table size ${state.table.size}", state.table.size in 12..18)
+            assertEquals(state.table.size, state.cardsOnTable)
             assertNotNull("seed $seed dealt a set-free table", findSetIndices(state.table))
             assertEquals(GameMode.TIMED, state.mode)
             assertFalse(state.started)
@@ -40,11 +42,11 @@ class GameStateTest {
         }
         assertEquals(GamePhase.GAME_OVER, state.phase)
         assertTrue(state.deck.isEmpty())
+        // Leftover cards are legal: a 12-slot table can end with 0, 3, 6 or 9
+        // cards and no set among them.
+        assertEquals(81 - 3 * state.setsFound, state.cardsOnTable)
         assertNull("a finished table must be set-free", findSetIndices(state.table))
-        // The run ends when no set remains, not necessarily when all 81 cards are
-        // used: 0, 3, 6, 9 or 12 cards can be left behind. 23 sets is the minimum.
         assertTrue("setsFound ${state.setsFound}", state.setsFound in 23..27)
-        assertEquals(81 - 3 * state.setsFound, state.table.size)
         assertEquals(0, state.mistakes)
     }
 
@@ -62,32 +64,59 @@ class GameStateTest {
     }
 
     @Test
-    fun findingASetAtTwelveDrawsReplacements() {
-        val table = capSetCards(9) + ovalTrio()
-        val deck = listOf(
+    fun replacementsFillTheVacatedSlotsWithoutMovingOtherCards() {
+        val untouched = capSetCards(9)
+        val table = untouched + ovalTrio()
+        val replacements = listOf(
             Card(CardNumber.THREE, CardColor.RED, CardShape.OVAL, CardShading.STRIPED),
             Card(CardNumber.THREE, CardColor.GREEN, CardShape.OVAL, CardShading.SOLID),
             Card(CardNumber.THREE, CardColor.PURPLE, CardShape.OVAL, CardShading.STRIPED),
         )
-        val state = GameState(table = table, deck = deck)
+        val state = GameState(table = table, deck = replacements)
         val after = listOf(9, 10, 11).fold(state) { acc, index -> acc.tap(index) }
 
         assertEquals(1, after.setsFound)
-        assertEquals(12, after.table.size)
+        assertEquals(12, after.cardsOnTable)
         assertTrue(after.deck.isEmpty())
-        assertTrue(after.selected.isEmpty())
+        // Everything outside the trio stayed exactly where it was.
+        assertEquals(untouched, after.table.take(9))
+        // The new cards went into the three vacated slots, in order.
+        assertEquals(replacements, after.table.subList(9, 12))
+        assertEquals(listOf(9, 10, 11), after.dealtSlots)
+        assertEquals(1, after.deals)
     }
 
     @Test
-    fun findingASetOnAWidenedTableDoesNotDrawReplacements() {
-        val table = capSetCards(12) + ovalTrio()
+    fun removedSetLeavesHolesWhenTheDeckIsEmpty() {
+        val table = capSetCards(9) + ovalTrio()
+        // 12 cards on the table and an empty deck means 23 sets are already gone.
+        val state = GameState(table = table, deck = emptyList(), setsFound = 23)
+        val after = listOf(9, 10, 11).fold(state) { acc, index -> acc.tap(index) }
+
+        assertEquals(24, after.setsFound)
+        assertEquals(9, after.cardsOnTable)
+        assertEquals(12, after.table.size) // the grid keeps its shape
+        assertNull(after.table[9])
+        assertNull(after.table[10])
+        assertNull(after.table[11])
+        assertTrue(after.dealtSlots.isEmpty())
+        assertEquals(capSetCards(9), after.table.take(9))
+        assertInvariant(after)
+    }
+
+    @Test
+    fun findingASetOnAWidenedTableCompactsBackTowardTwelve() {
+        val twelve = capSetCards(12)
+        val table = twelve + ovalTrio()
         val deck = fullDeck().take(3)
         val state = GameState(table = table, deck = deck)
         val after = listOf(12, 13, 14).fold(state) { acc, index -> acc.tap(index) }
 
         assertEquals(1, after.setsFound)
         assertEquals(12, after.table.size)
+        assertEquals(twelve, after.table)
         assertEquals(deck, after.deck)
+        assertTrue(after.dealtSlots.isEmpty())
     }
 
     @Test
@@ -98,6 +127,8 @@ class GameStateTest {
         assertEquals(15, after.table.size)
         assertTrue(after.deck.isEmpty())
         assertEquals(1, after.extraDeals)
+        assertEquals((12 until 15).toList(), after.dealtSlots)
+        assertEquals(1, after.deals)
         assertNotNull(findSetIndices(after.table))
     }
 
@@ -117,7 +148,8 @@ class GameStateTest {
         repeat(3) {
             state = state.hint()
             val indices = state.hintIndices ?: error("a granted hint must mark a set")
-            assertTrue(isSet(state.table[indices[0]], state.table[indices[1]], state.table[indices[2]]))
+            val revealed = indices.map { state.table[it]!! }
+            assertTrue(isSet(revealed[0], revealed[1], revealed[2]))
         }
         assertEquals(3, state.hintsUsed)
         assertEquals(0, state.hintsRemaining)
@@ -137,10 +169,19 @@ class GameStateTest {
     }
 
     @Test
-    fun outOfRangeTapsAreIgnored() {
+    fun outOfRangeAndHoleTapsAreIgnored() {
+        val withHole = GameState(table = listOf(null), deck = emptyList())
+        assertEquals(withHole, withHole.tap(0))
+
         val state = GameState.newGame(random = Random(2))
         assertEquals(state, state.tap(-1))
         assertEquals(state, state.tap(state.table.size))
+    }
+
+    @Test
+    fun tapsAreIgnoredWhileASetIsBlinking() {
+        val state = GameState.newGame(random = Random(6)).copy(goldSlots = listOf(0, 1, 2))
+        assertEquals(state, state.tap(3))
     }
 
     @Test

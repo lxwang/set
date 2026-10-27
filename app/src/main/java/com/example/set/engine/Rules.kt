@@ -13,12 +13,18 @@ fun isSet(a: Card, b: Card, c: Card): Boolean =
 private fun <T> allSameOrAllDifferent(a: T, b: T, c: T): Boolean =
     (a == b && b == c) || (a != b && b != c && a != c)
 
-/** Indices of one valid set, or null when the table is set-free. */
-fun findSetIndices(cards: List<Card>): List<Int>? {
+/**
+ * Indices of one valid set, or null when the table is set-free. Null slots
+ * (holes left by removed sets) are skipped.
+ */
+fun findSetIndices(cards: List<Card?>): List<Int>? {
     for (i in 0 until cards.size - 2) {
+        val a = cards[i] ?: continue
         for (j in i + 1 until cards.size - 1) {
+            val b = cards[j] ?: continue
             for (k in j + 1 until cards.size) {
-                if (isSet(cards[i], cards[j], cards[k])) return listOf(i, j, k)
+                val c = cards[k] ?: continue
+                if (isSet(a, b, c)) return listOf(i, j, k)
             }
         }
     }
@@ -26,7 +32,7 @@ fun findSetIndices(cards: List<Card>): List<Int>? {
 }
 
 /** One valid set, or null. Convenience for tests and hints. */
-fun findSet(cards: List<Card>): Triple<Card, Card, Card>? {
+fun findSet(cards: List<Card?>): Triple<Card, Card, Card>? {
     val indices = findSetIndices(cards) ?: return null
-    return Triple(cards[indices[0]], cards[indices[1]], cards[indices[2]])
+    return Triple(cards[indices[0]]!!, cards[indices[1]]!!, cards[indices[2]]!!)
 }

@@ -16,6 +16,7 @@ val Accent = Color(0xFF5B4BD6)
 val Danger = Color(0xFFB3261E)
 val CardFaceBackground = Color(0xFFFFFFFF)
 val CardBorder = Color(0xFFD9D2C7)
+val Gold = Color(0xFFC9A227)
 
 // Classic card colours
 val ClassicRed = Color(0xFFD93A2B)

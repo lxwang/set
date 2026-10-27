@@ -1,5 +1,6 @@
 package com.example.set.game
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -33,6 +34,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -51,8 +53,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.set.R
+import com.example.set.data.GameStore
 import com.example.set.data.SettingsRepository
 import com.example.set.engine.GameMode
 import com.example.set.engine.GamePhase
@@ -67,12 +73,14 @@ import kotlinx.coroutines.delay
 fun GameScreen(
     mode: GameMode,
     settings: SettingsRepository,
+    store: GameStore,
     gameKey: Int,
+    initialState: GameState?,
     onExit: () -> Unit,
     onGameOver: (GameResult) -> Unit,
 ) {
     val viewModel: GameViewModel = viewModel(key = "game-$gameKey") {
-        GameViewModel(mode, settings)
+        GameViewModel(mode, settings, store, initialState)
     }
     val state by viewModel.state.collectAsState()
 
@@ -84,6 +92,22 @@ fun GameScreen(
     var shakeTrigger by remember { mutableIntStateOf(0) }
 
     val shake = remember { Animatable(0f) }
+
+    // Leaving the game by any route pauses the clock and saves the game.
+    val exit: () -> Unit = {
+        viewModel.leave()
+        onExit()
+    }
+    BackHandler(onBack = exit)
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) viewModel.leave()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     LaunchedEffect(state.phase) {
         if (state.phase == GamePhase.GAME_OVER) {
@@ -135,7 +159,7 @@ fun GameScreen(
                 mode = mode,
                 menuOpen = menuOpen,
                 onMenuOpenChange = { menuOpen = it },
-                onExit = onExit,
+                onExit = exit,
                 onPause = viewModel::pause,
                 onResume = viewModel::resume,
                 hapticsEnabled = settings.hapticsEnabled,
@@ -191,7 +215,7 @@ fun GameScreen(
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = onExit) { Text(stringResource(R.string.action_home)) }
+                    TextButton(onClick = exit) { Text(stringResource(R.string.action_home)) }
                 },
             )
         }
@@ -263,18 +287,26 @@ private fun GameHeader(
 
         Spacer(Modifier.weight(1f))
 
-        Text(
-            text = stringResource(R.string.header_sets, state.setsFound),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-        )
-
-        if (mode == GameMode.TIMED) {
-            Spacer(Modifier.size(16.dp))
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = stringResource(R.string.header_sets, state.setsFound),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                if (mode == GameMode.TIMED) {
+                    Spacer(Modifier.size(16.dp))
+                    Text(
+                        text = formatDuration(state.totalSeconds),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontFamily = FontFamily.Monospace,
+                    )
+                }
+            }
             Text(
-                text = formatDuration(state.totalSeconds),
-                style = MaterialTheme.typography.titleMedium,
-                fontFamily = FontFamily.Monospace,
+                text = stringResource(R.string.header_on_table, state.cardsOnTable),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
 
@@ -396,12 +428,15 @@ private fun Board(
                 Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
                     for (column in 0 until columns) {
                         val index = row * columns + column
-                        if (index < state.table.size) {
+                        if (index < state.table.size && state.table[index] != null) {
                             CardFace(
-                                card = state.table[index],
+                                card = state.table[index]!!,
                                 colorblindPalette = colorblindPalette,
                                 isSelected = index in state.selected,
                                 isHinted = state.hintIndices?.contains(index) == true,
+                                isGold = index in state.goldSlots,
+                                animateDeal = index in state.dealtSlots,
+                                dealKey = state.deals,
                                 onClick = { onTap(index) },
                                 modifier = Modifier.size(cardWidth, cardHeight),
                             )

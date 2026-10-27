@@ -9,11 +9,14 @@
     <string name="mode_relaxed">Relaxed</string>
     <string name="mode_relaxed_detail">No timer, no penalty</string>
     <string name="start_play">Play</string>
+    <string name="action_resume_game">Resume game</string>
+    <string name="action_new_game_start">New game</string>
     <string name="start_best">Best · %1$d sets in %2$s</string>
     <string name="start_best_perfect">Best · perfect in %1$s</string>
     <string name="start_best_none">No result yet</string>
 
     <string name="header_sets">%1$d sets</string>
+    <string name="header_on_table">%1$d on table</string>
     <string name="action_back">Back</string>
     <string name="action_more">More</string>
     <string name="action_hint">Hint</string>

@@ -24,18 +24,27 @@ an adb daemon inside WSL.
   `Context`, it does not belong in `engine/`.
 - `GameState` is immutable; every transition returns a new state. Effects are
   one-shot UI concerns and never stored in the game state except `hintIndices`
-  (which the ViewModel clears after 2.5 s).
+  (cleared after 2.5 s) and `goldSlots` (the blink before a set is removed).
+- `table` is a list of **slots**: a null is a hole. Replacement cards are dealt
+  into holes left to right; other cards never move. Only an enlarged table
+  (15/18) compacts when a set is removed. Do not reintroduce `filterNotNull`
+  or list re-flows on the common path.
+- A found set is held by the ViewModel for 640 ms (`goldSlots`) before
+  `tap()` resolves it, so the UI can blink it. Taps are ignored while resolving.
 - The ViewModel owns time and persistence only. It calls `tap()`, then
   `ensurePlayable()`. `tap()` resolves a trio and draws replacements;
   `ensurePlayable()` deals extra cards for a set-free table and ends the game.
 - Settings use `SharedPreferences` synchronously. Do not add DataStore without a
   reason; see the deviations section of `DESIGN.md`.
+- The in-progress game is saved after every action (`GameStore` + `GameCodec`,
+  plain text, unit tested) and resumed on launch. The clock is accumulated, not
+  derived from timestamps, so away time never counts.
 
 ## Rules invariants (tests enforce these)
 
 - The deck is generated, never authored: 81 unique tuples, all 3⁴ combinations.
 - Over all 85,320 triples, exactly **1,080** are sets.
-- `table.size + deck.size + 3 * setsFound == 81` after every transition.
+- `cardsOnTable + deck.size + 3 * setsFound == 81` after every transition.
 - A run ends when the deck is empty **and** the table has no set. That leaves
   0/3/6/9/12 cards behind, so sets found is **23–27**, not always 27. Never add
   UI or logic that assumes 27 is reachable.
@@ -57,6 +66,8 @@ an adb daemon inside WSL.
   and none should be added. Shape geometry is normalised to a unit box.
 - A striped shape draws 7 clipped stripes plus an outline; open is outline only;
   solid is a fill.
+- Animations: a found set blinks gold twice (2 x 150 ms) before removal; new
+  cards slide in from +56 dp x / +40 dp y over 280 ms, keyed on `GameState.deals`.
 - Selection and hints must be visible without colour (border/lift), and every
   card carries a `contentDescription` like "two solid red diamonds".
 - Palette lives in `ui/theme/Theme.kt`. The colorblind option swaps to the
