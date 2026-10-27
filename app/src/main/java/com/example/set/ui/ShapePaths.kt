@@ -23,7 +23,11 @@ object ShapePaths {
         close()
     }
 
-    /** Wide rounded rectangle; corner radius stays below half the height. */
+    /**
+     * Wide, nearly elliptical oval. A corner radius close to half the height
+     * leaves only short flat segments, so it reads as an ellipse while keeping
+     * the width (aspect) of the physical card.
+     */
     private val oval: Path = Path().apply {
         addRoundRect(
             RoundRect(
@@ -31,7 +35,7 @@ object ShapePaths {
                 top = 0f,
                 right = 1f,
                 bottom = 1f,
-                cornerRadius = CornerRadius(0.26f, 0.24f),
+                cornerRadius = CornerRadius(0.45f, 0.45f),
             ),
         )
     }

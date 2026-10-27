@@ -225,8 +225,8 @@ four attributes and draws into a box of `w × 1.4w`:
   than they are tall, so the unit box is stretched by an aspect ratio rather than the path being
   drawn tall:
   - *Diamond*: rhombus filling the box, aspect 1.60 (w/h) — a wide diamond, not a rotated square.
-  - *Oval*: wide rounded rectangle filling the box, corner radius below half the height (0.26 w,
-    0.24 h h), aspect 1.75 — a squat capsule, not an ellipse.
+  - *Oval*: wide, nearly elliptical oval filling the box, corner radius 0.45 w / 0.45 h so only
+    short flat segments remain; aspect 1.75 keeps it as wide as the physical symbol.
   - *Squiggle*: a horizontal band of varying thickness following a sine centre line, sampled at
     64 steps and filling the box, aspect 1.55. Sampling keeps the curve organic and is cheap.
     Clamp `sin(PI)` before `sqrt` when tapering: it is a hair negative in Float maths and a NaN
@@ -239,9 +239,10 @@ four attributes and draws into a box of `w × 1.4w`:
     recognisable at small sizes.
   - *Open*: stroke the outline only, 2.5 dp.
 - **Number**: repeat the shape 1, 2, or 3 times in a **vertical column**, centred, with gaps of
-  0.12 × shape height. Shape height is capped both by the column's height budget and by the card
-  width, so a single shape is larger than each shape of a trio. This matches the physical layout:
-  symbols stack vertically.
+  0.10 × shape height. Symbol size shrinks deliberately with the count: **1.0 / 0.9 / 0.8** of the
+  single-symbol size for one, two and three symbols. The base size is solved from the three-symbol
+  case so the tallest column still fits, then capped by the card width. This gives a consistent
+  size hierarchy instead of trios shrinking to half the single-symbol size.
 - The card face keeps ≥ 8 dp inner padding so stripes never touch the border.
 
 Rendering rules are unit-testable only at the geometry level (path bounds, repetition count), so

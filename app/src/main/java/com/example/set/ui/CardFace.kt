@@ -140,13 +140,25 @@ fun CardFace(
         ) {
             val count = card.number.value
             val aspect = ShapePaths.aspect(card.shape) // width / height
-            val gapRatio = 0.12f
+            val gapRatio = 0.10f
             val maxShapeWidth = size.width * 0.94f
-            val heightBudget = size.height * 0.88f
+            val heightBudget = size.height * 0.94f
+
+            // Symbol size shrinks deliberately with the count: 1 -> 1.0,
+            // 2 -> 0.9, 3 -> 0.8 of the single-symbol size. The base size is
+            // solved from the three-symbol case so that column still fits.
+            val scale = when (count) {
+                1 -> 1f
+                2 -> 0.9f
+                else -> 0.8f
+            }
+            val baseHeight = minOf(
+                maxShapeWidth / aspect,
+                heightBudget / (3f * 0.8f + 2f * gapRatio * 0.8f),
+            )
 
             // Shapes stack vertically, as on the physical cards.
-            val perShapeHeight = heightBudget / (count + gapRatio * (count - 1))
-            val shapeHeight = minOf(perShapeHeight, maxShapeWidth / aspect)
+            val shapeHeight = baseHeight * scale
             val shapeWidth = shapeHeight * aspect
             val gap = shapeHeight * gapRatio
 
