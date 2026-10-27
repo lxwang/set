@@ -1,0 +1,176 @@
+package com.example.set.ui
+
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Matrix
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Fill
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
+import com.example.set.engine.Card
+import com.example.set.engine.CardShading
+import com.example.set.ui.theme.Accent
+import com.example.set.ui.theme.CardBorder
+import com.example.set.ui.theme.CardFaceBackground
+import com.example.set.ui.theme.Ink
+import com.example.set.ui.theme.cardColor
+
+private val CardShape12 = RoundedCornerShape(12.dp)
+
+/**
+ * One Set card, drawn from geometry only — no image assets. Selection and hint
+ * state are expressed through the border as well as colour, so they survive
+ * colour-vision differences.
+ */
+@Composable
+fun CardFace(
+    card: Card,
+    colorblindPalette: Boolean,
+    isSelected: Boolean,
+    isHinted: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val hintTransition = rememberInfiniteTransition(label = "hint")
+    val hintPulse by hintTransition.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
+        label = "hintPulse",
+    )
+    val scale by animateFloatAsState(
+        targetValue = if (isSelected) 1.02f else 1f,
+        animationSpec = tween(120),
+        label = "cardScale",
+    )
+
+    val borderColor = when {
+        isHinted -> Accent.copy(alpha = if (isHinted) hintPulse else 1f)
+        isSelected -> Ink
+        else -> CardBorder
+    }
+    val borderWidth = when {
+        isHinted -> 3.dp
+        isSelected -> 2.dp
+        else -> 1.dp
+    }
+
+    Box(
+        modifier = modifier
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .shadow(if (isSelected) 4.dp else 1.dp, CardShape12)
+            .clip(CardShape12)
+            .background(CardFaceBackground)
+            .border(borderWidth, borderColor, CardShape12)
+            .clickable(onClick = onClick)
+            .semantics(mergeDescendants = true) {
+                contentDescription = card.description
+                selected = isSelected
+                role = Role.Button
+            },
+    ) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(10.dp),
+        ) {
+            val count = card.number.value
+            val aspect = ShapePaths.aspect(card.shape)
+            val gapRatio = 0.14f
+            val maxHeight = size.height * 0.74f
+
+            val widthFromRow = size.width / (count + gapRatio * (count - 1))
+            val shapeWidth = minOf(widthFromRow, maxHeight * aspect)
+            val shapeHeight = shapeWidth / aspect
+            val gap = shapeWidth * gapRatio
+
+            val rowWidth = count * shapeWidth + (count - 1) * gap
+            var left = (size.width - rowWidth) / 2f
+            val top = (size.height - shapeHeight) / 2f
+
+            val color = cardColor(card.color, colorblindPalette)
+            val unitPath = ShapePaths.of(card.shape)
+            val stroke = 2.2.dp.toPx().coerceAtMost(shapeWidth * 0.08f)
+
+            repeat(count) {
+                val path = scaledPath(unitPath, shapeWidth, shapeHeight, left, top)
+                drawShaded(path, color, card.shading, stroke)
+                left += shapeWidth + gap
+            }
+        }
+    }
+}
+
+private fun scaledPath(
+    unit: Path,
+    width: Float,
+    height: Float,
+    left: Float,
+    top: Float,
+): Path = Path().apply {
+    addPath(unit)
+    transform(Matrix().apply { scale(width, height) })
+    translate(Offset(left, top))
+}
+
+private fun DrawScope.drawShaded(
+    path: Path,
+    color: Color,
+    shading: CardShading,
+    strokeWidth: Float,
+) {
+    when (shading) {
+        CardShading.SOLID -> drawPath(path, color, style = Fill)
+
+        CardShading.OPEN -> drawPath(path, color, style = Stroke(width = strokeWidth))
+
+        CardShading.STRIPED -> {
+            clipPath(path) {
+                val bounds = path.getBounds()
+                val stripes = 7
+                val slot = bounds.height / stripes
+                val stripeWidth = slot * 0.45f
+                for (i in 0 until stripes) {
+                    val y = bounds.top + slot * (i + 0.5f)
+                    drawLine(
+                        color = color,
+                        start = Offset(bounds.left - 2f, y),
+                        end = Offset(bounds.right + 2f, y),
+                        strokeWidth = stripeWidth,
+                    )
+                }
+            }
+            drawPath(path, color, style = Stroke(width = strokeWidth))
+        }
+    }
+}

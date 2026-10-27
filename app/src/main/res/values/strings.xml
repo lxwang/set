@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Set</string>
+
+    <string name="start_title">Set</string>
+    <string name="start_tagline">Three cards. Every feature all the same, or all different.</string>
+    <string name="mode_timed">Clear the deck</string>
+    <string name="mode_timed_detail">Against the clock · mistakes cost 10 s</string>
+    <string name="mode_relaxed">Relaxed</string>
+    <string name="mode_relaxed_detail">No timer, no penalty</string>
+    <string name="start_play">Play</string>
+    <string name="start_best">Best · %1$d sets in %2$s</string>
+    <string name="start_best_perfect">Best · perfect in %1$s</string>
+    <string name="start_best_none">No result yet</string>
+
+    <string name="header_sets">%1$d sets</string>
+    <string name="action_back">Back</string>
+    <string name="action_more">More</string>
+    <string name="action_hint">Hint</string>
+    <string name="action_hint_left">Hint · %1$d</string>
+    <string name="action_new_game">New game</string>
+    <string name="action_pause">Pause</string>
+    <string name="action_resume">Resume</string>
+    <string name="action_home">Home</string>
+    <string name="action_play_again">Play again</string>
+
+    <string name="pause_title">Paused</string>
+    <string name="pause_body">The clock is stopped.</string>
+    <string name="new_game_title">Start a new game?</string>
+    <string name="new_game_body">This game will be lost.</string>
+    <string name="new_game_confirm">Start over</string>
+    <string name="cancel">Cancel</string>
+
+    <string name="no_set_banner">No set here — dealing 3 more</string>
+    <string name="hint_none">No hints left</string>
+
+    <string name="summary_perfect">Perfect clear</string>
+    <string name="summary_cleared">Deck cleared</string>
+    <string name="summary_sets">sets</string>
+    <string name="summary_time">Time</string>
+    <string name="summary_mistakes">Mistakes</string>
+    <string name="summary_hints">Hints</string>
+    <string name="summary_penalty">Penalty</string>
+    <string name="summary_leftover">%1$d cards left</string>
+    <string name="summary_best_badge">New best</string>
+    <string name="summary_relaxed_note">Relaxed game — no time recorded</string>
+
+    <string name="settings_haptics">Haptics</string>
+    <string name="settings_colorblind">Colorblind palette</string>
+    <string name="how_to_play">How to play</string>
+    <string name="how_to_play_body">A set is three cards where each of the four features — number, colour, shape and shading — is either the same on all three cards or different on all three.\n\nTwo of one and one of another is never a set. Tap three cards to submit.\n\nIf the table has no set at all, three extra cards are dealt automatically. Hints are limited to three per game.</string>
+    <string name="close">Close</string>
+</resources>

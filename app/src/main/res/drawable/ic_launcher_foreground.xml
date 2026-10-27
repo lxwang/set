@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Three cards' worth of shapes: diamond, oval, squiggle. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- diamond, red -->
+    <path
+        android:fillColor="#D93A2B"
+        android:pathData="M22,54 L30,41 L38,54 L30,67 Z" />
+
+    <!-- oval, green -->
+    <path
+        android:fillColor="#1F9D55"
+        android:pathData="M54,40 C58.4,40 62,46.3 62,54 C62,61.7 58.4,68 54,68 C49.6,68 46,61.7 46,54 C46,46.3 49.6,40 54,40 Z" />
+
+    <!-- squiggle, purple -->
+    <path
+        android:fillColor="#7A4FD1"
+        android:pathData="M70,44 C74,44 77,47 76,50 C75,53 71,54 69,57 C67,60 69,64 73,64 C77,64 80,61 79,58 L83,58 C85,64 80,69 73,69 C66,69 62,64 64,58 C66,52 72,50 72,47 C72,45 71,44 70,44 Z" />
+</vector>
