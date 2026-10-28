@@ -16,6 +16,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 
 /**
  * Slides a newly dealt card in from a deck imagined just off the bottom-left
@@ -47,7 +48,9 @@ fun DealIn(
     val corner = Offset(-120f, windowSize.height + 120f)
 
     Box(
+        // Lift the flying card above its row siblings while it slides in.
         modifier = modifier
+            .zIndex(if (animate) 1f else 0f)
             .onGloballyPositioned {
                 topLeft = it.positionInWindow()
                 positioned = true

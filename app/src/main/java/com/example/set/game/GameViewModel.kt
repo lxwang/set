@@ -94,6 +94,7 @@ class GameViewModel(
 
         val resolved = candidate.ensurePlayable()
         update(resolved)
+        clearDealtSlotsLater(resolved)
         if (resolved.invalidSlots.isNotEmpty()) {
             viewModelScope.launch {
                 delay(INVALID_SHAKE_MILLIS)
@@ -133,6 +134,17 @@ class GameViewModel(
         update(GameState.newGame(mode))
     }
 
+    /** dealtSlots drives the slide-in animation and the z-order; retire it after. */
+    private fun clearDealtSlotsLater(state: GameState) {
+        if (state.dealtSlots.isEmpty()) return
+        viewModelScope.launch {
+            delay(DEAL_ANIMATION_MILLIS)
+            if (_state.value.dealtSlots.isNotEmpty()) {
+                _state.value = _state.value.copy(dealtSlots = emptyList())
+            }
+        }
+    }
+
     private fun update(next: GameState) {
         _state.value = next
         if (next.phase == GamePhase.GAME_OVER) {
@@ -166,5 +178,8 @@ class GameViewModel(
 
         /** Per-card invalid shake: 3 cycles of 50 ms each way, plus slack. */
         const val INVALID_SHAKE_MILLIS = 380L
+
+        /** Slide-in lasts 360 ms; keep the lifted z-order until it is done. */
+        const val DEAL_ANIMATION_MILLIS = 700L
     }
 }

@@ -48,6 +48,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -400,7 +401,16 @@ private fun Board(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             for (row in 0 until rows) {
-                Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
+                // A row containing a card that is still flying in is drawn above
+                // the other rows, so the deal animation is never hidden.
+                val rowIsDealing = (0 until columns).any { column ->
+                    val index = row * columns + column
+                    index < state.table.size && index in state.dealtSlots
+                }
+                Row(
+                    modifier = Modifier.zIndex(if (rowIsDealing) 1f else 0f),
+                    horizontalArrangement = Arrangement.spacedBy(gap),
+                ) {
                     for (column in 0 until columns) {
                         val index = row * columns + column
                         if (index < state.table.size && state.table[index] != null) {
