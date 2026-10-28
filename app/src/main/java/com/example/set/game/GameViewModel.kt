@@ -87,7 +87,11 @@ class GameViewModel(
             blinkJob?.cancel()
             blinkJob = viewModelScope.launch {
                 delay(GOLD_BLINK_MILLIS)
-                update(current.tap(index).ensurePlayable())
+                val resolved = current.tap(index).ensurePlayable()
+                update(resolved)
+                // Replacement cards slide in now; retire the flag so the lifted
+                // z-order and the animation state do not outlive the slide.
+                clearDealtSlotsLater(resolved)
             }
             return
         }

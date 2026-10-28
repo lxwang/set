@@ -17,6 +17,22 @@ adb logcat -c && adb logcat -d -v brief '*:E'
 If `adb devices` is empty, run `~/.config/android-emulator.sh start`; never start
 an adb daemon inside WSL.
 
+## Card alignment check
+
+`tools/gridcheck.py` decodes a screencap (stdlib only) and asserts every card
+sits on the 3-column grid. Use it after any animation change:
+
+```bash
+adb exec-out screencap -p > /tmp/board.png
+python3 tools/gridcheck.py /tmp/board.png      # PASS/FAIL + column/row edges
+```
+
+Animation state must always settle. Any `Animatable` driven by a flag that is
+cleared on a timer (deal slide, gold pop, invalid shake) needs an `else` branch
+that snaps to the resting value; otherwise the card stays parked mid-animation
+for the rest of the run. Key per-card animatables on the card, not on a global
+counter, or every deal restarts every slide.
+
 ## Architecture
 
 - `engine/` is pure Kotlin: no Android imports, no clock, no I/O. Rules and
@@ -51,6 +67,13 @@ an adb daemon inside WSL.
 - Replacement only tops the table back up to 12; a set found on a widened table
   (15/18) is removed without dealing.
 - Hints: hard cap of 3 per game, no time penalty. Mistakes: +10 s, timed mode only.
+
+## Theming
+
+`SetTheme` provides `LocalContentColor` from `onBackground`. `MaterialTheme`
+alone does not: uncoloured `Text`/`Icon` would fall back to black and vanish on
+the dark background. Keep screen-level `Box`es on `background` and rely on that
+provider rather than passing explicit colours.
 
 ## Versions
 

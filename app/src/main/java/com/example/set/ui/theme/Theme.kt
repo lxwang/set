@@ -1,10 +1,12 @@
 package com.example.set.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
 import com.example.set.engine.CardColor
 
@@ -77,10 +79,14 @@ fun SetTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit,
 ) {
-    MaterialTheme(
-        colorScheme = if (darkTheme) DarkScheme else LightScheme,
-        content = content,
-    )
+    val scheme = if (darkTheme) DarkScheme else LightScheme
+    MaterialTheme(colorScheme = scheme) {
+        // Without this, Text/Icon outside a Surface fall back to Color.Black,
+        // which is invisible on the dark background (header, summary figures).
+        CompositionLocalProvider(LocalContentColor provides scheme.onBackground) {
+            content()
+        }
+    }
 }
 
 /** Card colour for an attribute value, honouring palette and theme. */

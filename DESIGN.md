@@ -463,6 +463,7 @@ Shipped and verified on the `pi_phone` emulator (Android 16 / API 36):
 | M4 start/summary/pause/persistence | Done. Mode choice, best result survives relaunch, pause freezes the clock. |
 | M5 polish | Partial. Launcher icon, colorblind palette, selection without colour, font-scale-safe header. TalkBack pass and reduced-motion still pending. |
 | v0.1.1 | Auto-save/resume (back, home, process death), table count in the header, gold double-blink before a set clears, slot-stable replacement dealing, slide-in deal animation. |
+| v0.2.1 | Fix: the invalid-trio shake anchored cards a few dp off their slot when the trio cleared mid-shake, and a dealing card could freeze in mid-air when the deal flag retired early; dealing rows now retire their lifted z-order; dark theme gave uncoloured text and icons the wrong ink, so the header and summary figures were invisible. |
 | v0.2.0 | Deck count in the header, physical-card shape orientation and size hierarchy, gold outline + 6% pop, per-card invalid shake, deal from a bottom-left deck origin drawn above the board, high-contrast dark theme, `SET` wordmark in card colours, mode renamed to Timed. |
 
 Verified by script during implementation: a set was solved from `content-desc` and tapped

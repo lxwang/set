@@ -84,7 +84,8 @@ fun CardFace(
     )
 
     // A found set turns gold immediately, then pops 6% larger before removal.
-    val goldPop = remember { Animatable(1f) }
+    // Keyed on the card so a replacement never inherits the outgoing card's pop.
+    val goldPop = remember(card) { Animatable(1f) }
     LaunchedEffect(isGold) {
         if (isGold) {
             delay(200)
@@ -95,7 +96,7 @@ fun CardFace(
     }
 
     // Invalid trio: shake these three cards only, never the board.
-    val shake = remember { Animatable(0f) }
+    val shake = remember(card) { Animatable(0f) }
     LaunchedEffect(shakeKey, isInvalid) {
         if (isInvalid) {
             repeat(3) {
@@ -103,6 +104,10 @@ fun CardFace(
                 shake.animateTo(-6f, tween(50))
             }
             shake.animateTo(0f, tween(50))
+        } else {
+            // The trio is cleared on a timer, which can land mid-shake. Snap back
+            // instead of leaving the card parked a few dp off its slot.
+            shake.snapTo(0f)
         }
     }
 

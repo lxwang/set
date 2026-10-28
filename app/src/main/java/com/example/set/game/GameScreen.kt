@@ -416,7 +416,9 @@ private fun Board(
                         if (index < state.table.size && state.table[index] != null) {
                             DealIn(
                                 animate = index in state.dealtSlots,
-                                dealKey = state.deals,
+                                // Each card occurs once per game, so this restarts
+                                // the slide only when *this* slot gets a new card.
+                                dealKey = state.table[index].hashCode(),
                                 modifier = Modifier.size(cardWidth, cardHeight),
                             ) {
                                 CardFace(

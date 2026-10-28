@@ -26,6 +26,8 @@ import androidx.compose.ui.zIndex
  * The translation is computed from the card's real window position, which keeps
  * it correct across screen sizes and whenever the board layout changes.
  */
+private const val SLIDE_MILLIS = 360
+
 @Composable
 fun DealIn(
     animate: Boolean,
@@ -39,9 +41,15 @@ fun DealIn(
 
     val progress = remember(dealKey) { Animatable(if (animate) 0f else 1f) }
 
-    LaunchedEffect(dealKey, positioned, windowSize) {
-        if (animate && positioned && progress.value < 1f) {
-            progress.animateTo(1f, tween(360))
+    LaunchedEffect(dealKey, animate, positioned, windowSize) {
+        if (!animate) {
+            // dealtSlots is retired on a timer. If that lands while the card is
+            // still flying, finish the slide instead of freezing it in mid-air.
+            if (progress.value < 1f) progress.snapTo(1f)
+            return@LaunchedEffect
+        }
+        if (positioned && progress.value < 1f) {
+            progress.animateTo(1f, tween(SLIDE_MILLIS))
         }
     }
 
