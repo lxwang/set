@@ -58,9 +58,13 @@ class GameStateTest {
         assertEquals(1, after.mistakes)
         assertEquals(0, after.setsFound)
         assertTrue(after.selected.isEmpty())
+        assertEquals(listOf(0, 1, 2), after.invalidSlots)
         assertEquals(state.table, after.table)
         assertEquals(state.deck, after.deck)
         assertTrue(after.started)
+
+        // The very next tap clears the shake markers.
+        assertEquals(emptyList<Int>(), after.tap(3).invalidSlots)
     }
 
     @Test

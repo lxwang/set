@@ -4,7 +4,7 @@
 
     <string name="start_title">Set</string>
     <string name="start_tagline">Three cards. Every feature all the same, or all different.</string>
-    <string name="mode_timed">Clear the deck</string>
+    <string name="mode_timed">Timed</string>
     <string name="mode_timed_detail">Against the clock · mistakes cost 10 s</string>
     <string name="mode_relaxed">Relaxed</string>
     <string name="mode_relaxed_detail">No timer, no penalty</string>

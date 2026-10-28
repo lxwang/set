@@ -70,8 +70,13 @@ an adb daemon inside WSL.
 - Symbol size scales with the count: 1.0, 0.9, 0.8 for one, two, three symbols.
   The base size is solved from the three-symbol case; keep that hierarchy when
   changing the layout maths.
-- Animations: a found set blinks gold twice (2 x 150 ms) before removal; new
-  cards slide in from +56 dp x / +40 dp y over 280 ms, keyed on `GameState.deals`.
+- Animations: a found set turns gold, pops to 1.06 after 200 ms, and is removed
+  at 520 ms; an invalid trio shakes only those cards (`invalidSlots`, cleared
+  after 380 ms) — never the board; new cards slide from one shared point off the
+  bottom-left corner (`ui/DealIn.kt`, 360 ms, keyed on `GameState.deals`).
+- Theme: card faces use `surfaceContainerLowest`, borders `outlineVariant`,
+  selection `onSurface`. Dark theme has its own palette and lifted shape colours;
+  never hardcode `Color.White`/`Color.Black` for text or outlines.
 - Selection and hints must be visible without colour (border/lift), and every
   card carries a `contentDescription` like "two solid red diamonds".
 - Palette lives in `ui/theme/Theme.kt`. The colorblind option swaps to the

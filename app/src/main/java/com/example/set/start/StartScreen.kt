@@ -22,8 +22,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -32,8 +34,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.set.R
 import com.example.set.data.SettingsRepository
+import com.example.set.engine.CardColor
 import com.example.set.engine.GameMode
 import com.example.set.engine.formatDuration
+import com.example.set.ui.theme.cardColor
 
 @Composable
 fun StartScreen(
@@ -53,11 +57,27 @@ fun StartScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(
-            text = stringResource(R.string.start_title),
-            style = MaterialTheme.typography.displayLarge,
-            fontWeight = FontWeight.Bold,
-        )
+        // SET in the three card colours, using the active palette.
+        val darkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
+        val titleDescription = stringResource(R.string.start_title)
+        Row(
+            modifier = Modifier.semantics(mergeDescendants = true) {
+                contentDescription = titleDescription
+            },
+        ) {
+            listOf(
+                CardColor.RED to "S",
+                CardColor.GREEN to "E",
+                CardColor.PURPLE to "T",
+            ).forEach { (color, letter) ->
+                Text(
+                    text = letter,
+                    style = MaterialTheme.typography.displayLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = cardColor(color, settings.colorblindPalette, darkTheme),
+                )
+            }
+        }
         Spacer(Modifier.height(12.dp))
         Text(
             text = stringResource(R.string.start_tagline),
@@ -159,6 +179,7 @@ private fun ModeOption(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
+                color = scheme.onSurface,
             )
             Text(
                 text = detail,

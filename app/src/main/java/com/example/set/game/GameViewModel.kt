@@ -92,7 +92,16 @@ class GameViewModel(
             return
         }
 
-        update(candidate.ensurePlayable())
+        val resolved = candidate.ensurePlayable()
+        update(resolved)
+        if (resolved.invalidSlots.isNotEmpty()) {
+            viewModelScope.launch {
+                delay(INVALID_SHAKE_MILLIS)
+                if (_state.value.invalidSlots.isNotEmpty()) {
+                    _state.value = _state.value.copy(invalidSlots = emptyList())
+                }
+            }
+        }
     }
 
     fun hint() {
@@ -152,7 +161,10 @@ class GameViewModel(
     }
 
     private companion object {
-        /** Two gold blinks at 150 ms per phase, plus a little slack. */
-        const val GOLD_BLINK_MILLIS = 640L
+        /** Gold outline, then a 6% pop, then removal. */
+        const val GOLD_BLINK_MILLIS = 520L
+
+        /** Per-card invalid shake: 3 cycles of 50 ms each way, plus slack. */
+        const val INVALID_SHAKE_MILLIS = 380L
     }
 }

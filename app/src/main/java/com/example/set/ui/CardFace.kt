@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -31,6 +32,7 @@ import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -40,18 +42,18 @@ import androidx.compose.ui.unit.dp
 import com.example.set.engine.Card
 import com.example.set.engine.CardShading
 import com.example.set.ui.theme.Accent
-import com.example.set.ui.theme.CardBorder
-import com.example.set.ui.theme.CardFaceBackground
 import com.example.set.ui.theme.Gold
-import com.example.set.ui.theme.Ink
 import com.example.set.ui.theme.cardColor
+import kotlinx.coroutines.delay
 
 private val CardShape12 = RoundedCornerShape(12.dp)
 
 /**
- * One Set card, drawn from geometry only — no image assets. Selection, hints and
- * the "set found" gold blink are expressed through the border as well as colour,
- * so they survive colour-vision differences.
+ * One Set card, drawn from geometry only — no image assets. Selection, hints,
+ * the invalid shake and the "set found" gold pop are expressed through shape and
+ * border as well as colour, so they survive colour-vision differences.
+ *
+ * The deal animation lives in [DealIn] because it needs the card's position.
  */
 @Composable
 fun CardFace(
@@ -60,11 +62,14 @@ fun CardFace(
     isSelected: Boolean,
     isHinted: Boolean,
     isGold: Boolean,
-    animateDeal: Boolean,
-    dealKey: Int,
+    isInvalid: Boolean,
+    shakeKey: Int,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val scheme = MaterialTheme.colorScheme
+    val darkTheme = scheme.background.luminance() < 0.5f
+
     val hintTransition = rememberInfiniteTransition(label = "hint")
     val hintPulse by hintTransition.animateFloat(
         initialValue = 0.35f,
@@ -72,59 +77,58 @@ fun CardFace(
         animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
         label = "hintPulse",
     )
-    val scale by animateFloatAsState(
-        targetValue = if (isSelected || isGold) 1.02f else 1f,
+    val selectedScale by animateFloatAsState(
+        targetValue = if (isSelected) 1.02f else 1f,
         animationSpec = tween(120),
         label = "cardScale",
     )
 
-    // Two gold blinks, then the ViewModel removes the set.
-    val goldBlink = remember { Animatable(0f) }
+    // A found set turns gold immediately, then pops 6% larger before removal.
+    val goldPop = remember { Animatable(1f) }
     LaunchedEffect(isGold) {
         if (isGold) {
-            repeat(2) {
-                goldBlink.animateTo(1f, tween(150))
-                goldBlink.animateTo(0f, tween(150))
-            }
+            delay(200)
+            goldPop.animateTo(1.06f, tween(140))
         } else {
-            goldBlink.snapTo(0f)
+            goldPop.snapTo(1f)
         }
     }
 
-    // New cards slide in from the bottom-right corner.
-    val dealProgress = remember(card, dealKey) {
-        Animatable(if (animateDeal) 0f else 1f)
-    }
-    LaunchedEffect(dealKey) {
-        if (dealProgress.value < 1f) {
-            dealProgress.animateTo(1f, tween(280))
+    // Invalid trio: shake these three cards only, never the board.
+    val shake = remember { Animatable(0f) }
+    LaunchedEffect(shakeKey, isInvalid) {
+        if (isInvalid) {
+            repeat(3) {
+                shake.animateTo(6f, tween(50))
+                shake.animateTo(-6f, tween(50))
+            }
+            shake.animateTo(0f, tween(50))
         }
     }
 
     val borderColor = when {
-        isGold -> Gold.copy(alpha = 0.30f + 0.70f * goldBlink.value)
+        isGold -> Gold
         isHinted -> Accent.copy(alpha = hintPulse)
-        isSelected -> Ink
-        else -> CardBorder
+        isSelected -> scheme.onSurface
+        else -> scheme.outlineVariant
     }
     val borderWidth = when {
         isGold || isHinted -> 3.dp
         isSelected -> 2.dp
         else -> 1.dp
     }
+    val scale = if (isGold) goldPop.value else selectedScale
 
     Box(
         modifier = modifier
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
-                translationX = (1f - dealProgress.value) * 56.dp.toPx()
-                translationY = (1f - dealProgress.value) * 40.dp.toPx()
-                alpha = 0.2f + 0.8f * dealProgress.value
+                translationX = shake.value.dp.toPx()
             }
             .shadow(if (isSelected || isGold) 4.dp else 1.dp, CardShape12)
             .clip(CardShape12)
-            .background(CardFaceBackground)
+            .background(scheme.surfaceContainerLowest)
             .border(borderWidth, borderColor, CardShape12)
             .clickable(onClick = onClick)
             .semantics(mergeDescendants = true) {
@@ -147,7 +151,7 @@ fun CardFace(
             // Symbol size shrinks deliberately with the count: 1 -> 1.0,
             // 2 -> 0.9, 3 -> 0.8 of the single-symbol size. The base size is
             // solved from the three-symbol case so that column still fits.
-            val scale = when (count) {
+            val scaleFactor = when (count) {
                 1 -> 1f
                 2 -> 0.9f
                 else -> 0.8f
@@ -158,7 +162,7 @@ fun CardFace(
             )
 
             // Shapes stack vertically, as on the physical cards.
-            val shapeHeight = baseHeight * scale
+            val shapeHeight = baseHeight * scaleFactor
             val shapeWidth = shapeHeight * aspect
             val gap = shapeHeight * gapRatio
 
@@ -166,7 +170,7 @@ fun CardFace(
             var top = (size.height - totalHeight) / 2f
             val left = (size.width - shapeWidth) / 2f
 
-            val color = cardColor(card.color, colorblindPalette)
+            val color = cardColor(card.color, colorblindPalette, darkTheme)
             val unitPath = ShapePaths.of(card.shape)
             val stroke = 2.2.dp.toPx().coerceAtMost(shapeWidth * 0.08f)
 

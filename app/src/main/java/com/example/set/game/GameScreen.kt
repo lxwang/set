@@ -1,8 +1,6 @@
 package com.example.set.game
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
@@ -38,7 +35,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -51,7 +47,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -66,7 +61,7 @@ import com.example.set.engine.GameState
 import com.example.set.engine.formatDuration
 import com.example.set.engine.totalSeconds
 import com.example.set.ui.CardFace
-import kotlin.math.roundToInt
+import com.example.set.ui.DealIn
 import kotlinx.coroutines.delay
 
 @Composable
@@ -89,9 +84,6 @@ fun GameScreen(
     var showHowTo by remember { mutableStateOf(false) }
     var confirmNewGame by remember { mutableStateOf(false) }
     var bannerVisible by remember { mutableStateOf(false) }
-    var shakeTrigger by remember { mutableIntStateOf(0) }
-
-    val shake = remember { Animatable(0f) }
 
     // Leaving the game by any route pauses the clock and saves the game.
     val exit: () -> Unit = {
@@ -122,11 +114,8 @@ fun GameScreen(
         }
     }
     LaunchedEffect(state.mistakes) {
-        if (state.mistakes > 0) {
-            shakeTrigger++
-            if (settings.hapticsEnabled) {
-                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-            }
+        if (state.mistakes > 0 && settings.hapticsEnabled) {
+            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
         }
     }
     LaunchedEffect(state.setsFound) {
@@ -134,16 +123,6 @@ fun GameScreen(
             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
         }
     }
-    LaunchedEffect(shakeTrigger) {
-        if (shakeTrigger > 0) {
-            repeat(3) {
-                shake.animateTo(6f, tween(50))
-                shake.animateTo(-6f, tween(50))
-            }
-            shake.animateTo(0f, tween(50))
-        }
-    }
-
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -169,11 +148,7 @@ fun GameScreen(
                 onHowToPlay = { showHowTo = true },
             )
 
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .offset { IntOffset(shake.value.roundToInt(), 0) },
-            ) {
+            Box(modifier = Modifier.weight(1f)) {
                 Board(
                     state = state,
                     colorblindPalette = settings.colorblindPalette,
@@ -429,17 +404,23 @@ private fun Board(
                     for (column in 0 until columns) {
                         val index = row * columns + column
                         if (index < state.table.size && state.table[index] != null) {
-                            CardFace(
-                                card = state.table[index]!!,
-                                colorblindPalette = colorblindPalette,
-                                isSelected = index in state.selected,
-                                isHinted = state.hintIndices?.contains(index) == true,
-                                isGold = index in state.goldSlots,
-                                animateDeal = index in state.dealtSlots,
+                            DealIn(
+                                animate = index in state.dealtSlots,
                                 dealKey = state.deals,
-                                onClick = { onTap(index) },
                                 modifier = Modifier.size(cardWidth, cardHeight),
-                            )
+                            ) {
+                                CardFace(
+                                    card = state.table[index]!!,
+                                    colorblindPalette = colorblindPalette,
+                                    isSelected = index in state.selected,
+                                    isHinted = state.hintIndices?.contains(index) == true,
+                                    isGold = index in state.goldSlots,
+                                    isInvalid = index in state.invalidSlots,
+                                    shakeKey = state.mistakes,
+                                    onClick = { onTap(index) },
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            }
                         } else {
                             Spacer(Modifier.size(cardWidth, cardHeight))
                         }

@@ -32,8 +32,10 @@ data class GameState(
     val hintIndices: List<Int>? = null,
     /** Number of extra-deal events so far; the UI flashes a banner on change. */
     val extraDeals: Int = 0,
-    /** A completed set waiting for its blink animation before it is removed. */
+    /** A completed set waiting for its gold/pop animation before it is removed. */
     val goldSlots: List<Int> = emptyList(),
+    /** The trio the player just submitted as an invalid set; shaken by the UI. */
+    val invalidSlots: List<Int> = emptyList(),
     /** Slots filled by the most recent deal, for the slide-in animation. */
     val dealtSlots: List<Int> = emptyList(),
     /** Monotonic counter, bumped once per deal event; keys the deal animation. */
@@ -65,7 +67,12 @@ data class GameState(
         }
 
         if (nextSelected.size < 3) {
-            return copy(selected = nextSelected, started = true, hintIndices = null)
+            return copy(
+                selected = nextSelected,
+                started = true,
+                hintIndices = null,
+                invalidSlots = emptyList(),
+            )
         }
 
         val trio = nextSelected.map { table[it]!! }
@@ -75,6 +82,7 @@ data class GameState(
                 mistakes = mistakes + 1,
                 started = true,
                 hintIndices = null,
+                invalidSlots = nextSelected,
             )
         }
 
@@ -115,6 +123,7 @@ data class GameState(
             started = true,
             hintIndices = null,
             goldSlots = emptyList(),
+            invalidSlots = emptyList(),
             dealtSlots = dealt,
             deals = deals + if (dealt.isNotEmpty()) 1 else 0,
         )
@@ -141,6 +150,7 @@ data class GameState(
                     phase = GamePhase.GAME_OVER,
                     hintIndices = null,
                     goldSlots = emptyList(),
+                    invalidSlots = emptyList(),
                     dealtSlots = emptyList(),
                 )
             }
@@ -158,6 +168,7 @@ data class GameState(
             deck = remainingDeck,
             selected = emptyList(),
             hintIndices = null,
+            invalidSlots = emptyList(),
             extraDeals = extraDeals + eventDeals,
             dealtSlots = dealt,
             deals = deals + 1,

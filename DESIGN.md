@@ -87,7 +87,7 @@ all-different on others simultaneously.
    reachable: the header shows the set count alone, and a run that empties the table earns a
    **PERFECT** badge. Sets found is the first sort key for best results, time is the second.
 
-### 2.4 Scoring (v1: "Clear the deck")
+### 2.4 Scoring (v1: "Timed")
 
 - **Primary metric:** sets found, then elapsed time. Sets found varies with the shuffle
   (23–27); a *perfect* run leaves the table empty.
@@ -112,7 +112,8 @@ persisted as the last-used mode.
 
 Three surfaces only:
 
-1. **Start** — title, mode toggle (Clear the deck / Relaxed), best time, "Play".
+1. **Start** — `SET` wordmark in the three card colours, mode toggle (Timed / Relaxed), best
+   time, "Play" (or "Resume game" when a saved game exists).
 2. **Game** — the board plus a thin header and footer. This is 95% of the app.
 3. **Summary** — result, time, mistakes, hints, best-time badge, "Play again" / "Home".
 
@@ -161,8 +162,9 @@ Plus a **pause sheet** reachable from the game header (also triggered by leaving
 |---|---|
 | Card tapped | Card lifts ~2 dp, border thickens, subtle scale to 1.02 over 120 ms; haptic tick |
 | Third card tapped | 220 ms validation beat before resolution (so the player sees all three) |
-| Valid set | Cards blink a **gold** outline twice (150 ms per phase), then disappear; replacements slide in from the bottom-right of their slots over 280 ms; haptic confirm |
-| Invalid trio | Cards shake horizontally (±6 dp, 3 cycles, 300 ms), then deselect; low tone; haptic reject |
+| Valid set | Outlines turn **gold** immediately, then the three cards pop 6% larger and disappear; haptic confirm |
+| Deal | New cards slide in from a deck imagined just off the **bottom-left corner** of the screen (one shared origin), over 360 ms |
+| Invalid trio | Only those three cards shake horizontally (±6 dp, 3 cycles, 300 ms); the board never moves; haptic reject |
 | Hint | One valid set's three cards pulse an outline for 2.5 s; timer penalty toast |
 | No set on table | Inline banner "No set here — dealing 3 more" for 2 s, then the deal animates |
 | Game over | Board fades, summary sheet slides up |
@@ -211,6 +213,7 @@ Additional rules:
 | Card elevation | 1 dp rest, 4 dp selected |
 | Spacing scale | 4, 8, 12, 16, 20, 24 dp |
 | Type | Material 3 defaults; timer and counters in `Roboto Mono`-equivalent (`FontFamily.Monospace`) |
+| Dark theme | Background `#0E0D12`, card face `#211E2A`, text `#F2EFF7`, outline `#6B6478`; card shapes use lifted red/green/purple (`#FF7A68`, `#57D48C`, `#B79CFF`) so they stay legible on a dark card |
 
 Material 3 theming only; colors are defined once in `ui/theme/Color.kt` and consumed through
 `MaterialTheme.colorScheme` plus a small `SetColors` extension for the three card colors.
@@ -460,6 +463,7 @@ Shipped and verified on the `pi_phone` emulator (Android 16 / API 36):
 | M4 start/summary/pause/persistence | Done. Mode choice, best result survives relaunch, pause freezes the clock. |
 | M5 polish | Partial. Launcher icon, colorblind palette, selection without colour, font-scale-safe header. TalkBack pass and reduced-motion still pending. |
 | v0.1.1 | Auto-save/resume (back, home, process death), table count in the header, gold double-blink before a set clears, slot-stable replacement dealing, slide-in deal animation. |
+| v0.1.2 | Deck count in the header, physical-card shape orientation and size hierarchy, gold outline + 6% pop, per-card invalid shake, deal from a bottom-left deck origin, high-contrast dark theme, `SET` wordmark in card colours, mode renamed to Timed. |
 
 Verified by script during implementation: a set was solved from `content-desc` and tapped
 (counter 0 → 1, table back to 12), an invalid trio left the counter unchanged and charged the
