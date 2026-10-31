@@ -45,7 +45,7 @@ counter, or every deal restarts every slide.
   into holes left to right; other cards never move. Only an enlarged table
   (15/18) compacts when a set is removed. Do not reintroduce `filterNotNull`
   or list re-flows on the common path.
-- A found set is held by the ViewModel for 640 ms (`goldSlots`) before
+- A found set is held by the ViewModel for 520 ms (`goldSlots`) before
   `tap()` resolves it, so the UI can blink it. Taps are ignored while resolving.
 - The ViewModel owns time and persistence only. It calls `tap()`, then
   `ensurePlayable()`. `tap()` resolves a trio and draws replacements;
